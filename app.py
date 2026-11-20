@@ -1,15 +1,15 @@
 import streamlit as st
-import pandas as pd
 import pdfplumber
+import pandas as pd
 import tempfile
 import io
+import unicodedata
 
 from openpyxl import load_workbook
-from openpyxl.cell.cell import MergedCell
 
-# --------------------------------------------------
+# ==========================================
 # CONFIGURAÇÃO
-# --------------------------------------------------
+# ==========================================
 
 st.set_page_config(
     page_title="FT71 Automático",
@@ -20,16 +20,14 @@ st.set_page_config(
 st.title("📊 FT71 Automático")
 
 st.markdown(
-    "Preenchimento automático da FT71 a partir de certificado PDF"
+    "Preenchimento automático da FT71 a partir de certificados PDF"
 )
 
-# --------------------------------------------------
+# ==========================================
 # FUNÇÕES
-# --------------------------------------------------
+# ==========================================
 
 def limpar(txt):
-
-    import unicodedata
 
     if txt is None:
         return ""
@@ -51,90 +49,72 @@ def limpar(txt):
     return txt.strip()
 
 
-def detectar_grandeza(texto):
+def detectar_grandeza(texto, tabela=None):
 
-    txt = limpar(texto)
+    linhas = texto.split("\n")
 
-    regras = {
+    # prioridade 1
 
-        "capacitance measurements":
-        "Capacitância",
+    for i, linha in enumerate(linhas):
 
-        "medicoes em capacitancia":
-        "Capacitância",
+        if "instrumento" in linha.lower():
 
-        "resistance measurements":
-        "Resistência",
+            if i + 1 < len(linhas):
 
-        "medicoes em resistencia":
-        "Resistência",
+                proxima = linhas[i + 1].strip()
 
-        "frequency measurements":
-        "Frequência",
+                if len(proxima) > 3:
 
-        "medicoes em frequencia":
-        "Frequência",
+                    return proxima
 
-        "voltage measurements":
-        "Tensão",
+    # prioridade 2
 
-        "medicoes em tensao":
-        "Tensão",
+    for linha in linhas:
 
-        "current measurements":
-        "Corrente",
+        linha_limpa = linha.strip()
 
-        "medicoes em corrente":
-        "Corrente",
+        if "medições" in linha_limpa.lower():
+            return linha_limpa
 
-        "inductance measurements":
-        "Indutância"
-    }
-
-    for chave, valor in regras.items():
-
-        if chave in txt:
-            return valor
+        if "measurement" in linha_limpa.lower():
+            return linha_limpa
 
     return ""
 
 
-def detectar_unidade(df):
+def detectar_unidade(texto):
 
-    for coluna in df.columns:
+    unidades = [
+        "mm",
+        "cm",
+        "m",
+        "µm",
+        "pF",
+        "nF",
+        "µF",
+        "uF",
+        "mF",
+        "F",
+        "Hz",
+        "kHz",
+        "MHz",
+        "GHz",
+        "V",
+        "mV",
+        "kV",
+        "A",
+        "mA",
+        "Ω",
+        "kΩ",
+        "MΩ"
+    ]
 
-        texto = str(coluna)
+    texto = str(texto)
 
-        if (
-            "UUT" in texto
-            or
-            "Instrumento" in texto
-        ):
+    for unidade in unidades:
 
-            partes = texto.split("\n")
-
-            for parte in partes:
-
-                parte = parte.strip()
-
-                if parte in [
-                    "pF",
-                    "nF",
-                    "µF",
-                    "uF",
-                    "mF",
-                    "F",
-                    "Ω",
-                    "kΩ",
-                    "MΩ",
-                    "V",
-                    "mV",
-                    "kV",
-                    "A",
-                    "mA"
-                ]:
-
-                    return parte
+        if unidade in texto:
+            return unidade
 
     return ""
 
@@ -153,9 +133,10 @@ def localizar_coluna(df, termos):
 
     return None
 
-# --------------------------------------------------
+
+# ==========================================
 # INTERFACE
-# --------------------------------------------------
+# ==========================================
 
 pdf_file = st.file_uploader(
     "📄 Certificado PDF",
@@ -163,7 +144,7 @@ pdf_file = st.file_uploader(
 )
 
 ft71_file = st.file_uploader(
-    "📊 FT71",
+    "📊 FT71 (.xlsm)",
     type=["xlsm"]
 )
 
@@ -176,39 +157,29 @@ registro = st.selectbox(
     ]
 )
 
-linha_inicial = st.number_input(
+linha_atual = st.number_input(
     "Linha Inicial",
-    min_value=1,
-    value=16
+    value=16,
+    min_value=1
 )
 
-# --------------------------------------------------
-# PROCESSAR
-# --------------------------------------------------
+# ==========================================
+# PROCESSAMENTO
+# ==========================================
 
 if st.button("🚀 PROCESSAR FT71"):
 
     if pdf_file is None:
 
-        st.error(
-            "Selecione o PDF"
-        )
-
+        st.error("Selecione o PDF")
         st.stop()
 
     if ft71_file is None:
 
-        st.error(
-            "Selecione a FT71"
-        )
-
+        st.error("Selecione a FT71")
         st.stop()
 
     barra = st.progress(0)
-
-    # --------------------------
-    # salvar temporários
-    # --------------------------
 
     with tempfile.NamedTemporaryFile(
         delete=False,
@@ -234,10 +205,6 @@ if st.button("🚀 PROCESSAR FT71"):
 
     barra.progress(10)
 
-    # --------------------------
-    # extrair tabelas
-    # --------------------------
-
     dados_tabelas = []
 
     with pdfplumber.open(pdf_path) as pdf:
@@ -249,12 +216,12 @@ if st.button("🚀 PROCESSAR FT71"):
                 or ""
             )
 
-            tabs = pagina.extract_tables()
+            tabelas = pagina.extract_tables()
 
-            if not tabs:
+            if not tabelas:
                 continue
 
-            for tabela in tabs:
+            for tabela in tabelas:
 
                 try:
 
@@ -277,28 +244,12 @@ if st.button("🚀 PROCESSAR FT71"):
 
     barra.progress(30)
 
-    st.success(
-        f"{len(dados_tabelas)} tabelas encontradas"
-    )
-
-    # --------------------------
-    # abrir FT71
-    # --------------------------
-
     wb = load_workbook(
         xlsm_path,
         keep_vba=True
     )
 
     ws = wb[registro]
-
-    linha_atual = linha_inicial
-
-    barra.progress(40)
-
-    # --------------------------
-    # cabeçalhos FT71
-    # --------------------------
 
     cabecalhos = {}
 
@@ -314,9 +265,7 @@ if st.button("🚀 PROCESSAR FT71"):
 
         if valor:
 
-            cabecalhos[col] = limpar(
-                valor
-            )
+            cabecalhos[col] = limpar(valor)
 
     col_grandeza = None
     col_unidade = None
@@ -333,7 +282,11 @@ if st.button("🚀 PROCESSAR FT71"):
         elif "unidade" in nome:
             col_unidade = c
 
-        elif "instrumento" in nome:
+        elif (
+            "instrumento" in nome
+            or
+            "valor do instrumento" in nome
+        ):
             col_inst = c
 
         elif "referencia" in nome:
@@ -347,10 +300,6 @@ if st.button("🚀 PROCESSAR FT71"):
 
     barra.progress(50)
 
-    # --------------------------
-    # preenchimento
-    # --------------------------
-
     for bloco in dados_tabelas:
 
         texto_pagina = bloco["texto"]
@@ -358,26 +307,37 @@ if st.button("🚀 PROCESSAR FT71"):
         tabela = bloco["tabela"]
 
         grandeza = detectar_grandeza(
-            texto_pagina
+            texto_pagina,
+            tabela
         )
 
         unidade = detectar_unidade(
-            tabela
+            texto_pagina
         )
 
         col_pdf_inst = localizar_coluna(
             tabela,
-            ["uut", "instrumento"]
+            [
+                "uut",
+                "instrumento",
+                "valor nominal"
+            ]
         )
 
         col_pdf_ref = localizar_coluna(
             tabela,
-            ["ref", "reference"]
+            [
+                "ref",
+                "reference"
+            ]
         )
 
         col_pdf_erro = localizar_coluna(
             tabela,
-            ["erro", "error"]
+            [
+                "erro",
+                "error"
+            ]
         )
 
         col_pdf_inc = localizar_coluna(
@@ -390,83 +350,73 @@ if st.button("🚀 PROCESSAR FT71"):
 
         for _, linha in tabela.iterrows():
 
-            if col_grandeza:
-
-                cel = ws.cell(
-                    linha_atual,
-                    col_grandeza
-                )
-
-                if not isinstance(
-                    cel,
-                    MergedCell
-                ):
-
-                    cel.value = grandeza
-
-            if col_unidade:
+            if col_grandeza is not None:
 
                 ws.cell(
-                    linha_atual,
-                    col_unidade,
-                    unidade
+                    row=linha_atual,
+                    column=col_grandeza,
+                    value=grandeza
+                )
+
+            if col_unidade is not None:
+
+                ws.cell(
+                    row=linha_atual,
+                    column=col_unidade,
+                    value=unidade
                 )
 
             if (
-                col_inst
+                col_inst is not None
                 and
-                col_pdf_inst
+                col_pdf_inst is not None
             ):
 
                 ws.cell(
-                    linha_atual,
-                    col_inst,
-                    linha[col_pdf_inst]
+                    row=linha_atual,
+                    column=col_inst,
+                    value=linha[col_pdf_inst]
                 )
 
             if (
-                col_ref
+                col_ref is not None
                 and
-                col_pdf_ref
+                col_pdf_ref is not None
             ):
 
                 ws.cell(
-                    linha_atual,
-                    col_ref,
-                    linha[col_pdf_ref]
+                    row=linha_atual,
+                    column=col_ref,
+                    value=linha[col_pdf_ref]
                 )
 
             if (
-                col_inc
+                col_inc is not None
                 and
-                col_pdf_inc
+                col_pdf_inc is not None
             ):
 
                 ws.cell(
-                    linha_atual,
-                    col_inc,
-                    linha[col_pdf_inc]
+                    row=linha_atual,
+                    column=col_inc,
+                    value=linha[col_pdf_inc]
                 )
 
             if (
-                col_erro
+                col_erro is not None
                 and
-                col_pdf_erro
+                col_pdf_erro is not None
             ):
 
                 ws.cell(
-                    linha_atual,
-                    col_erro,
-                    linha[col_pdf_erro]
+                    row=linha_atual,
+                    column=col_erro,
+                    value=linha[col_pdf_erro]
                 )
 
             linha_atual += 1
 
     barra.progress(90)
-
-    # --------------------------
-    # gerar download
-    # --------------------------
 
     output = io.BytesIO()
 
@@ -477,7 +427,7 @@ if st.button("🚀 PROCESSAR FT71"):
     barra.progress(100)
 
     st.success(
-        "FT71 preenchida com sucesso"
+        "FT71 preenchida com sucesso."
     )
 
     st.download_button(
