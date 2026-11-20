@@ -2,7 +2,8 @@ import streamlit as st
 
 st.set_page_config(
     page_title="FT71 Automático",
-    page_icon="📊"
+    page_icon="📊",
+    layout="wide"
 )
 
 st.title("FT71 Automático")
@@ -28,14 +29,27 @@ registro = st.selectbox(
 
 linha_inicial = st.number_input(
     "Linha Inicial",
+    min_value=1,
     value=16
 )
 
 if st.button("PROCESSAR FT71"):
 
-    st.success("Integração iniciada!")
+    if pdf_file is None:
+        st.error("Selecione o PDF")
+        st.stop()
 
-    st.write("PDF:", pdf_file)
-    st.write("FT71:", ft71_file)
+    if ft71_file is None:
+        st.error("Selecione a FT71")
+        st.stop()
+
+    st.success("Arquivos carregados")
+
+    st.write("PDF:", pdf_file.name)
+    st.write("FT71:", ft71_file.name)
     st.write("Registro:", registro)
-    st.write("Linha:", linha_inicial)
+    st.write("Linha Inicial:", linha_inicial)
+
+    st.info(
+        "Próxima etapa: integrar a lógica completa da FT71."
+    )
