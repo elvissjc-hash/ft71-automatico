@@ -1,20 +1,10 @@
 import streamlit as st
 #teste
-import subprocess
+import sys
+import streamlit as st
 
-try:
-    resultado = subprocess.run(
-        ["powershell",
-         "-Command",
-         "$excel = New-Object -ComObject Excel.Application; $excel.Quit(); Write-Output 'OK'"],
-        capture_output=True,
-        text=True
-    )
-
-    st.write("Resultado:", resultado.stdout)
-
-except Exception as e:
-    st.error(str(e))
+st.write(sys.executable)
+st.write(sys.version)   
 
 
 #teste
