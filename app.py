@@ -426,7 +426,7 @@ if st.button("🚀 PROCESSAR FT71"):
 
             linha_atual += 1
 
-    barra.progress(90)
+    # barra.progress(90)
 
     # output = io.BytesIO()
 
