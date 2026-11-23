@@ -436,7 +436,7 @@ if st.button("🚀 PROCESSAR FT71"):
     
     wb.save(xlsm_path)
 
-barra.progress(100)
+st.write("CHEGOU AQUI")
 
 st.success(
     "FT71 preenchida com sucesso."
