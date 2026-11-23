@@ -428,10 +428,10 @@ if st.button("🚀 PROCESSAR FT71"):
 
     barra.progress(90)
 
-    output = io.BytesIO()
+    # output = io.BytesIO()
 
-    wb.save(output)
-
+    # wb.save(output)
+    wb.save(xlsm_path)
     output.seek(0)
 
     barra.progress(100)
