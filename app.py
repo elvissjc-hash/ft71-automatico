@@ -1,4 +1,10 @@
 import streamlit as st
+try:
+    import win32com.client
+    st.success("✅ WIN32 DISPONÍVEL")
+except Exception as e:
+    st.error(f"❌ WIN32 NÃO DISPONÍVEL: {e}")
+
 import pdfplumber
 import pandas as pd
 import tempfile
