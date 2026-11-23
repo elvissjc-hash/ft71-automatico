@@ -436,12 +436,12 @@ if st.button("🚀 PROCESSAR FT71"):
     
     wb.save(xlsm_path)
 
-st.write("CHEGOU AQUI")
+barra.progress(100)
 
 st.success(
     "FT71 preenchida com sucesso."
 )
-
+st.write("xlsm_path =", xlsm_path)
 with open(xlsm_path, "rb") as f:
     st.download_button(
         label="📥 Baixar FT71_PREENCHIDA.xlsm",
