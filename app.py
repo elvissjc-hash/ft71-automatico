@@ -1,11 +1,5 @@
 import streamlit as st
 #teste
-import platform
-import streamlit as st
-
-st.write(platform.system())
-st.write(platform.platform()) 
-
 
 #teste
 
