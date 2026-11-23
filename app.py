@@ -1,10 +1,10 @@
 import streamlit as st
 #teste
-import sys
+import platform
 import streamlit as st
 
-st.write(sys.executable)
-st.write(sys.version)   
+st.write(platform.system())
+st.write(platform.platform()) 
 
 
 #teste
