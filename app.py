@@ -1,9 +1,23 @@
 import streamlit as st
+#teste
+import subprocess
+
 try:
-    import win32com.client
-    st.success("✅ WIN32 DISPONÍVEL")
+    resultado = subprocess.run(
+        ["powershell",
+         "-Command",
+         "$excel = New-Object -ComObject Excel.Application; $excel.Quit(); Write-Output 'OK'"],
+        capture_output=True,
+        text=True
+    )
+
+    st.write("Resultado:", resultado.stdout)
+
 except Exception as e:
-    st.error(f"❌ WIN32 NÃO DISPONÍVEL: {e}")
+    st.error(str(e))
+
+
+#teste
 
 import pdfplumber
 import pandas as pd
