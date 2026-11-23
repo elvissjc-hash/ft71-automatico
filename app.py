@@ -436,15 +436,15 @@ if st.button("🚀 PROCESSAR FT71"):
     
     # wb.save(xlsm_path)
 
-barra.progress(100)
+    barra.progress(100)
 
-st.success(
-    "FT71 preenchida com sucesso."
-)
+    st.success(
+        "FT71 preenchida com sucesso."
+    )
 
-st.download_button(
-    label="📥 Baixar FT71_PREENCHIDA.xlsm",
-    data=output,
-    file_name="FT71_PREENCHIDA.xlsm",
-    mime="application/vnd.ms-excel.sheet.macroEnabled.12"
+    st.download_button(
+        label="📥 Baixar FT71_PREENCHIDA.xlsm",
+        data=output,
+        file_name="FT71_PREENCHIDA.xlsm",
+        mime="application/vnd.ms-excel.sheet.macroEnabled.12"
 )
