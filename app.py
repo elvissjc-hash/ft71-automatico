@@ -431,18 +431,20 @@ if st.button("🚀 PROCESSAR FT71"):
     # output = io.BytesIO()
 
     # wb.save(output)
+   
+    # output.seek(0)
+    
     wb.save(xlsm_path)
-    output.seek(0)
-
     barra.progress(100)
 
     st.success(
         "FT71 preenchida com sucesso."
     )
 
+    with open(xlsm_path, "rb") as f:
     st.download_button(
         label="📥 Baixar FT71_PREENCHIDA.xlsm",
-        data=output,
+        data=f.read(),
         file_name="FT71_PREENCHIDA.xlsm",
         mime="application/vnd.ms-excel.sheet.macroEnabled.12"
     )
