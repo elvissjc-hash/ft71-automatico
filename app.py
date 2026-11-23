@@ -9,7 +9,7 @@ import tempfile
 import io
 import unicodedata
 
-from openpyxl import load_workbook
+from openpyxl import Workbook
 
 # ==========================================
 # CONFIGURAÇÃO
@@ -147,11 +147,6 @@ pdf_file = st.file_uploader(
     type=["pdf"]
 )
 
-ft71_file = st.file_uploader(
-    "📊 FT71 (.xlsm)",
-    type=["xlsm"]
-)
-
 registro = st.selectbox(
     "Registro",
     [
@@ -166,7 +161,6 @@ linha_atual = st.number_input(
     value=16,
     min_value=1
 )
-
 # ==========================================
 # PROCESSAMENTO
 # ==========================================
@@ -174,13 +168,7 @@ linha_atual = st.number_input(
 if st.button("🚀 PROCESSAR FT71"):
 
     if pdf_file is None:
-
         st.error("Selecione o PDF")
-        st.stop()
-
-    if ft71_file is None:
-
-        st.error("Selecione a FT71")
         st.stop()
 
     barra = st.progress(0)
@@ -195,17 +183,6 @@ if st.button("🚀 PROCESSAR FT71"):
         )
 
         pdf_path = tmp_pdf.name
-
-    with tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix=".xlsm"
-    ) as tmp_xlsm:
-
-        tmp_xlsm.write(
-            ft71_file.getvalue()
-        )
-
-        xlsm_path = tmp_xlsm.name
 
     barra.progress(10)
 
@@ -248,59 +225,25 @@ if st.button("🚀 PROCESSAR FT71"):
 
     barra.progress(30)
 
-    wb = load_workbook(
-        xlsm_path,
-        keep_vba=True
-    )
+    wb_saida = Workbook()
 
-    ws = wb[registro]
+    ws_saida = wb_saida.active
 
-    cabecalhos = {}
+    ws_saida.title = "IMPORTACAO"
 
-    for col in range(
-        1,
-        ws.max_column + 1
-    ):
+    ws_saida["A1"] = "GRANDEZA"
+    ws_saida["B1"] = "UNIDADE"
+    ws_saida["C1"] = "INSTRUMENTO"
+    ws_saida["D1"] = "REFERENCIA"
+    ws_saida["E1"] = "ERRO"
+    ws_saida["F1"] = "INCERTEZA"
 
-        valor = ws.cell(
-            row=15,
-            column=col
-        ).value
+    # informações para a macro VBA
 
-        if valor:
+    ws_saida["H1"] = registro
+    ws_saida["H2"] = linha_atual
 
-            cabecalhos[col] = limpar(valor)
-
-    col_grandeza = None
-    col_unidade = None
-    col_inst = None
-    col_ref = None
-    col_inc = None
-    col_erro = None
-
-    for c, nome in cabecalhos.items():
-
-        if "grandeza" in nome:
-            col_grandeza = c
-
-        elif "unidade" in nome:
-            col_unidade = c
-
-        elif (
-            "instrumento" in nome
-            or
-            "valor do instrumento" in nome
-        ):
-            col_inst = c
-
-        elif "referencia" in nome:
-            col_ref = c
-
-        elif "incerteza" in nome:
-            col_inc = c
-
-        elif "erro" in nome:
-            col_erro = c
+    linha_saida = 2
 
     barra.progress(50)
 
@@ -354,91 +297,69 @@ if st.button("🚀 PROCESSAR FT71"):
 
         for _, linha in tabela.iterrows():
 
-            if col_grandeza is not None:
+            ws_saida.cell(
+                linha_saida,
+                1,
+                grandeza
+            )
 
-                ws.cell(
-                    row=linha_atual,
-                    column=col_grandeza,
-                    value=grandeza
+            ws_saida.cell(
+                linha_saida,
+                2,
+                unidade
+            )
+
+            if col_pdf_inst is not None:
+
+                ws_saida.cell(
+                    linha_saida,
+                    3,
+                    linha[col_pdf_inst]
                 )
 
-            if col_unidade is not None:
+            if col_pdf_ref is not None:
 
-                ws.cell(
-                    row=linha_atual,
-                    column=col_unidade,
-                    value=unidade
+                ws_saida.cell(
+                    linha_saida,
+                    4,
+                    linha[col_pdf_ref]
                 )
 
-            if (
-                col_inst is not None
-                and
-                col_pdf_inst is not None
-            ):
+            if col_pdf_erro is not None:
 
-                ws.cell(
-                    row=linha_atual,
-                    column=col_inst,
-                    value=linha[col_pdf_inst]
+                ws_saida.cell(
+                    linha_saida,
+                    5,
+                    linha[col_pdf_erro]
                 )
 
-            if (
-                col_ref is not None
-                and
-                col_pdf_ref is not None
-            ):
+            if col_pdf_inc is not None:
 
-                ws.cell(
-                    row=linha_atual,
-                    column=col_ref,
-                    value=linha[col_pdf_ref]
+                ws_saida.cell(
+                    linha_saida,
+                    6,
+                    linha[col_pdf_inc]
                 )
 
-            if (
-                col_inc is not None
-                and
-                col_pdf_inc is not None
-            ):
+            linha_saida += 1
 
-                ws.cell(
-                    row=linha_atual,
-                    column=col_inc,
-                    value=linha[col_pdf_inc]
-                )
-
-            if (
-                col_erro is not None
-                and
-                col_pdf_erro is not None
-            ):
-
-                ws.cell(
-                    row=linha_atual,
-                    column=col_erro,
-                    value=linha[col_pdf_erro]
-                )
-
-            linha_atual += 1
-
-     # barra.progress(90)
+    barra.progress(90)
 
     output = io.BytesIO()
 
-    wb.save(output)
-   
+    wb_saida.save(output)
+
     output.seek(0)
-    
-    # wb.save(xlsm_path)
 
     barra.progress(100)
 
     st.success(
-        "FT71 preenchida com sucesso."
+        "Arquivo de importação criado com sucesso."
     )
 
     st.download_button(
-        label="📥 Baixar FT71_PREENCHIDA.xlsm",
+        label="📥 Baixar DADOS_IMPORTACAO.xlsx",
         data=output,
-        file_name="FT71_PREENCHIDA.xlsm",
-        mime="application/vnd.ms-excel.sheet.macroEnabled.12"
-)
+        file_name="DADOS_IMPORTACAO.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
