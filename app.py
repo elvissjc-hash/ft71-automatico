@@ -147,20 +147,8 @@ pdf_file = st.file_uploader(
     type=["pdf"]
 )
 
-registro = st.selectbox(
-    "Registro",
-    [
-        "REGISTRO_Ano_X",
-        "REGISTRO_Ano_Y",
-        "REGISTRO_Ano_Z"
-    ]
-)
 
-linha_atual = st.number_input(
-    "Linha Inicial",
-    value=16,
-    min_value=1
-)
+
 # ==========================================
 # PROCESSAMENTO
 # ==========================================
@@ -240,9 +228,7 @@ if st.button("🚀 PROCESSAR FT71"):
 
     # informações para a macro VBA
 
-    ws_saida["H1"] = registro
-    ws_saida["H2"] = linha_atual
-
+    
     linha_saida = 2
 
     barra.progress(50)
