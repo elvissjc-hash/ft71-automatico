@@ -52,12 +52,35 @@ def limpar(txt):
 
     return txt.strip()
 
-
 def detectar_grandeza(texto, tabela=None):
 
-    linhas = texto.split("\n")
+    txt = limpar(texto)
 
-    # prioridade 1
+    if "medidor de resistencia" in txt:
+        return "RESISTENCIA"
+
+    if "medidor de corrente continua" in txt:
+        return "CORRENTE DC"
+
+    if "medidor de corrente alternada" in txt:
+        return "CORRENTE AC"
+
+    if "medidor de tensao corrente continua" in txt:
+        return "TENSAO DC"
+
+    if "medidor de tensao corrente alternada" in txt:
+        return "TENSAO AC"
+
+    if "capacitancia" in txt:
+        return "CAPACITANCIA"
+
+    if "frequencia" in txt:
+        return "FREQUENCIA"
+
+    if "medicoes lineares" in txt:
+        return "DIMENSIONAL"
+
+    linhas = texto.split("\n")
 
     for i, linha in enumerate(linhas):
 
@@ -71,54 +94,35 @@ def detectar_grandeza(texto, tabela=None):
 
                     return proxima
 
-    # prioridade 2
-
-    for linha in linhas:
-
-        linha_limpa = linha.strip()
-
-        if "medições" in linha_limpa.lower():
-            return linha_limpa
-
-        if "measurement" in linha_limpa.lower():
-            return linha_limpa
-
     return ""
-
 
 def detectar_unidade(texto):
 
-    unidades = [
-        "mm",
-        "cm",
-        "m",
-        "µm",
-        "pF",
-        "nF",
-        "µF",
-        "uF",
-        "mF",
-        "F",
-        "Hz",
-        "kHz",
-        "MHz",
-        "GHz",
-        "V",
-        "mV",
-        "kV",
-        "A",
-        "mA",
-        "Ω",
-        "kΩ",
-        "MΩ"
-    ]
+    txt = limpar(texto)
 
-    texto = str(texto)
+    if "resistencia" in txt:
+        return "Ω"
 
-    for unidade in unidades:
+    if "capacitancia" in txt:
+        return "pF"
 
-        if unidade in texto:
-            return unidade
+    if "frequencia" in txt:
+        return "Hz"
+
+    if "corrente continua" in txt:
+        return "A"
+
+    if "corrente alternada" in txt:
+        return "A"
+
+    if "tensao corrente continua" in txt:
+        return "V"
+
+    if "tensao corrente alternada" in txt:
+        return "V"
+
+    if "medicoes lineares" in txt:
+        return "mm"
 
     return ""
 
@@ -251,9 +255,13 @@ if st.button("🚀 PROCESSAR FT71"):
         col_pdf_inst = localizar_coluna(
             tabela,
             [
-                "uut",
-                "instrumento",
-                "valor nominal"
+                    "uut",
+                    "instrumento",
+                    "valor nominal",
+                    "valor do instrumento",
+                    "valor indicado",
+                    "reading",
+                    "indication"
             ]
         )
 
@@ -261,7 +269,10 @@ if st.button("🚀 PROCESSAR FT71"):
             tabela,
             [
                 "ref",
-                "reference"
+                "reference",
+                "referencia",
+                "valor de referencia",
+                "standard"
             ]
         )
 
@@ -269,7 +280,10 @@ if st.button("🚀 PROCESSAR FT71"):
             tabela,
             [
                 "erro",
-                "error"
+                "error",
+                "desvio",
+                "deviation",
+                "correcao"
             ]
         )
 
@@ -277,7 +291,8 @@ if st.button("🚀 PROCESSAR FT71"):
             tabela,
             [
                 "incerteza",
-                "uncertainty"
+                "uncertainty",
+                "expanded uncertainty"
             ]
         )
 
