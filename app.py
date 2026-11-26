@@ -331,9 +331,9 @@ if st.button("🚀 PROCESSAR FT71"):
         st.write("TEXTO DA PAGINA:")
         st.write(texto_pagina[:1000])
 
-# for _, linha in tabela.iterrows():
+
             
-        # for _, linha in tabela.iterrows():
+         for _, linha in tabela.iterrows():
 
             ws_saida.cell(
                 linha_saida,
