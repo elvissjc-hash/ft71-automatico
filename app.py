@@ -1,5 +1,5 @@
 import streamlit as st
-import camelot
+
 import pdfplumber
 import pandas as pd
 import tempfile
@@ -212,41 +212,6 @@ def detectar_unidade(texto):
     return ""
 
 
-# ====================================================
-# EXTRAÇÃO CAMLOT
-# ====================================================
-
-def extrair_camlot(arquivo_pdf):
-
-    tabelas_extraidas = []
-
-    try:
-
-        tables = camelot.read_pdf(
-            arquivo_pdf,
-            pages="all",
-            flavor="lattice"
-        )
-
-        for table in tables:
-
-            df = table.df
-
-            if len(df) > 1:
-
-                cab = df.iloc[0]
-
-                df = df[1:]
-
-                df.columns = cab
-
-                tabelas_extraidas.append(df)
-
-    except:
-        pass
-
-    return tabelas_extraidas
-
 
 # ====================================================
 # FALLBACK PDFPLUMBER
@@ -313,32 +278,72 @@ if st.button("🚀 PROCESSAR FT71"):
 
     with pdfplumber.open(caminho_pdf) as pdf:
 
-        texto_completo = ""
+    paginas_texto = []
 
-        for p in pdf.pages:
+    for p in pdf.pages:
 
-            texto_completo += (
-                p.extract_text()
-                or ""
-            )
-
-    grandeza = detectar_grandeza(
-        texto_completo
-    )
-
-    unidade = detectar_unidade(
-        texto_completo
-    )
-
-    tabelas = extrair_camlot(
-        caminho_pdf
-    )
-
-    if len(tabelas) == 0:
-
-        tabelas = extrair_pdfplumber(
-            caminho_pdf
+        paginas_texto.append(
+         p.extract_text() or ""
         )
+
+    tabelas = extrair_pdfplumber(
+    caminho_pdf
+    )
+
+    def detectar_grandeza_pagina(texto):
+
+    txt = limpar(texto)
+
+    if "medidor de resistencia" in txt:
+        return "RESISTENCIA"
+
+    if "medidor de corrente continua" in txt:
+        return "CORRENTE DC"
+
+    if "medidor de corrente alternada" in txt:
+        return "CORRENTE AC"
+
+    if "medidor de tensao corrente continua" in txt:
+        return "TENSAO DC"
+
+    if "medidor de tensao corrente alternada" in txt:
+        return "TENSAO AC"
+
+    if "capacitancia" in txt:
+        return "CAPACITANCIA"
+
+    if "frequencia" in txt:
+        return "FREQUENCIA"
+
+    if "medicoes lineares" in txt:
+        return "DIMENSIONAL"
+
+    return "NAO IDENTIFICADA"
+
+
+    def detectar_unidade_grandeza(grandeza):
+
+        unidades = {
+
+        "RESISTENCIA": "Ω",
+
+        "CAPACITANCIA": "pF",
+
+        "FREQUENCIA": "Hz",
+
+        "TENSAO DC": "V",
+        "TENSAO AC": "V",
+
+        "CORRENTE DC": "A",
+        "CORRENTE AC": "A",
+
+        "DIMENSIONAL": "mm"
+    }
+
+    return unidades.get(
+        grandeza,
+        ""
+    )
 
     wb = Workbook()
 
@@ -359,8 +364,27 @@ if st.button("🚀 PROCESSAR FT71"):
     )
 
     registros = 0
-
+    
+    indice_pagina = 0
     for tabela in tabelas:
+
+    pagina_texto = ""
+
+    if indice_pagina < len(paginas_texto):
+
+        pagina_texto = paginas_texto[
+            indice_pagina
+        ]
+
+    grandeza = detectar_grandeza_pagina(
+        pagina_texto
+    )
+
+    unidade = detectar_unidade_grandeza(
+        grandeza
+    )
+
+    indice_pagina += 1
 
         col_inst = localizar_coluna(
             tabela,
