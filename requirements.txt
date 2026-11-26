@@ -1,5 +1,6 @@
 streamlit
-pdfplumber
 pandas
+pdfplumber
 openpyxl
-rapidfuzz
+camelot-py
+ghostscript
