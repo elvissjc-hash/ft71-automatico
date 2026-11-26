@@ -333,7 +333,7 @@ if st.button("🚀 PROCESSAR FT71"):
 
 
             
-         for _, linha in tabela.iterrows():
+        for _, linha in tabela.iterrows():
 
             ws_saida.cell(
                 linha_saida,
