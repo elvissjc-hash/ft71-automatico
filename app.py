@@ -1,9 +1,28 @@
+import io
 import re
-import sys
-import pdfplumber
-import pandas as pd
 
-# Estratégias testadas em ordem: primeiro tabelas com bordas, depois tabelas sem bordas
+import pdfplumber
+import streamlit as st
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+
+# ==========================================
+# CONFIGURAÇÃO
+# ==========================================
+
+st.set_page_config(
+    page_title="Extrator de Tabelas",
+    page_icon="📊",
+    layout="wide"
+)
+
+st.title("📊 Extrator de Tabelas de Certificados")
+st.markdown(
+    "Extrai todas as tabelas do PDF e gera um Excel com elas uma embaixo da outra."
+)
+
+# Primeiro tenta tabelas com bordas; se não achar, tenta tabelas só com alinhamento de texto
 ESTRATEGIAS = [
     {"vertical_strategy": "lines", "horizontal_strategy": "lines"},
     {
@@ -15,106 +34,144 @@ ESTRATEGIAS = [
     },
 ]
 
+# ==========================================
+# FUNÇÕES
+# ==========================================
 
-def limpar(valor):
-    """Remove None, quebras de linha e espaços duplicados."""
+def limpar_celula(valor):
+    """Converte para texto, remove quebras de linha e espaços duplicados."""
     if valor is None:
         return ""
     return re.sub(r"\s+", " ", str(valor)).strip()
 
 
-def tabela_valida(linhas):
-    """Descarta falsos positivos: precisa ter pelo menos 2 linhas e 2 colunas com conteúdo."""
+def tabela_valida(tabela):
+    """Descarta falsos positivos: precisa ter ao menos 2 linhas com conteúdo e 2 colunas."""
+    linhas = [l for l in tabela if any(limpar_celula(c) for c in l)]
     if len(linhas) < 2:
         return False
-    if max(len(l) for l in linhas) < 2:
-        return False
-    return any(any(c and str(c).strip() for c in l) for l in linhas)
+    return max(len(l) for l in linhas) >= 2
 
 
-def remover_vazios(df):
-    """Remove linhas e colunas totalmente vazias, sem alterar a ordem do conteúdo."""
-    df = df.loc[~(df == "").all(axis=1)]
-    df = df.loc[:, ~(df == "").all(axis=0)]
-    return df.reset_index(drop=True)
-
-
-def extrair_tabelas(caminho_pdf):
+def extrair_tabelas(arquivo_pdf):
     """
-    Lê todas as páginas do PDF e devolve uma lista de dicionários:
-    {"pagina": int, "ordem": int, "df": DataFrame}
+    Lê todas as páginas e devolve uma lista de dicionários:
+    {"pagina": int, "ordem": int, "linhas": [[célula, ...], ...]}
     """
     resultados = []
-    with pdfplumber.open(caminho_pdf) as pdf:
-        for num_pag, pagina in enumerate(pdf.pages, start=1):
+
+    with pdfplumber.open(arquivo_pdf) as pdf:
+        for num_pagina, pagina in enumerate(pdf.pages, start=1):
             tabelas = []
+
             for settings in ESTRATEGIAS:
                 encontradas = pagina.extract_tables(table_settings=settings)
                 tabelas = [t for t in encontradas if t and tabela_valida(t)]
-                if tabelas:  # se achou com a primeira estratégia, não tenta a segunda
+                if tabelas:
                     break
 
             for ordem, tabela in enumerate(tabelas, start=1):
-                df = pd.DataFrame(tabela).map(limpar)
-                df = remover_vazios(df)
-                if not df.empty:
-                    resultados.append({"pagina": num_pag, "ordem": ordem, "df": df})
+                linhas = [[limpar_celula(c) for c in linha] for linha in tabela]
+                linhas = [l for l in linhas if any(l)]  # remove linhas vazias
+
+                if not linhas:
+                    continue
+
+                # Iguala o número de colunas das linhas
+                n_colunas = max(len(l) for l in linhas)
+                linhas = [l + [""] * (n_colunas - len(l)) for l in linhas]
+
+                # Remove colunas totalmente vazias
+                colunas_uteis = [
+                    i for i in range(n_colunas)
+                    if any(l[i] for l in linhas)
+                ]
+                linhas = [[l[i] for i in colunas_uteis] for l in linhas]
+
+                resultados.append({
+                    "pagina": num_pagina,
+                    "ordem": ordem,
+                    "linhas": linhas,
+                })
+
     return resultados
 
 
-def nome_aba(base, usados):
-    """Gera nome válido para aba do Excel (até 31 caracteres, sem caracteres proibidos e sem duplicar)."""
-    limpo = re.sub(r"[\\/*?:\[\]]", "", base)[:31]
-    nome, i = limpo, 2
-    while nome in usados:
-        sufixo = f"_{i}"
-        nome = limpo[: 31 - len(sufixo)] + sufixo
-        i += 1
-    usados.add(nome)
-    return nome
+def gerar_excel(resultados):
+    """Grava todas as tabelas em uma aba, uma embaixo da outra."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "TABELAS"
+
+    borda = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+    fill_titulo = PatternFill("solid", fgColor="BDD7EE")
+    largura = {}
+    linha_atual = 1
+
+    for item in resultados:
+        # Título da tabela
+        titulo = f"Página {item['pagina']} - Tabela {item['ordem']}"
+        cel_titulo = ws.cell(row=linha_atual, column=1, value=titulo)
+        cel_titulo.font = Font(bold=True)
+        cel_titulo.fill = fill_titulo
+        linha_atual += 1
+
+        # Linhas da tabela, exatamente como no PDF
+        for registro in item["linhas"]:
+            for c, valor in enumerate(registro, start=1):
+                cel = ws.cell(row=linha_atual, column=c, value=valor)
+                cel.border = borda
+                cel.alignment = Alignment(vertical="center", wrap_text=True)
+                largura[c] = max(largura.get(c, 0), len(valor))
+            linha_atual += 1
+
+        linha_atual += 1  # linha em branco entre tabelas
+
+    for c, tamanho in largura.items():
+        ws.column_dimensions[get_column_letter(c)].width = min(max(tamanho + 2, 10), 60)
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
 
 
-def salvar_excel(resultados, caminho_saida):
-    usados = set()
-    indice = []
+# ==========================================
+# INTERFACE
+# ==========================================
 
-    with pd.ExcelWriter(caminho_saida, engine="openpyxl") as writer:
-        for item in resultados:
-            nome = nome_aba(f"P{item['pagina']}_T{item['ordem']}", usados)
-            # header=False e index=False: a tabela sai exatamente como no PDF
-            item["df"].to_excel(writer, sheet_name=nome, header=False, index=False)
-            indice.append({
-                "Aba": nome,
-                "Página do PDF": item["pagina"],
-                "Tabela na página": item["ordem"],
-                "Linhas": item["df"].shape[0],
-                "Colunas": item["df"].shape[1],
-            })
+pdf_file = st.file_uploader("📄 Certificado PDF", type=["pdf"])
 
-        if not resultados:
-            pd.DataFrame({"Aviso": ["Nenhuma tabela encontrada no PDF."]}).to_excel(
-                writer, sheet_name="Aviso", index=False
-            )
-        else:
-            pd.DataFrame(indice).to_excel(writer, sheet_name="Indice", index=False)
+if st.button("🚀 EXTRAIR TABELAS"):
 
-        # Ajusta largura das colunas em todas as abas
-        for ws in writer.sheets.values():
-            for coluna in ws.columns:
-                tamanho = max((len(str(c.value)) for c in coluna if c.value is not None), default=8)
-                ws.column_dimensions[coluna[0].column_letter].width = min(tamanho + 2, 60)
+    if pdf_file is None:
+        st.error("Selecione o PDF.")
+        st.stop()
 
-    return len(resultados)
+    with st.spinner("Lendo o PDF..."):
+        resultados = extrair_tabelas(io.BytesIO(pdf_file.getvalue()))
 
+    if not resultados:
+        st.warning("Nenhuma tabela foi encontrada neste PDF.")
+        st.stop()
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Uso: python extrair_tabelas_pdf.py certificado.pdf [saida.xlsx]")
-        sys.exit(1)
+    st.success(f"{len(resultados)} tabela(s) encontrada(s).")
 
-    pdf_entrada = sys.argv[1]
-    excel_saida = sys.argv[2] if len(sys.argv) > 2 else "tabelas_certificado.xlsx"
+    # Pré-visualização de cada tabela
+    for item in resultados:
+        st.subheader(f"Página {item['pagina']} - Tabela {item['ordem']}")
+        st.dataframe(item["linhas"], use_container_width=True)
 
-    tabelas = extrair_tabelas(pdf_entrada)
-    total = salvar_excel(tabelas, excel_saida)
-    print(f"{total} tabela(s) encontrada(s). Arquivo salvo: {excel_saida}")
+    excel = gerar_excel(resultados)
+
+    st.download_button(
+        label="📥 Baixar Excel com todas as tabelas",
+        data=excel,
+        file_name="TABELAS_CERTIFICADO.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
