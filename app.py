@@ -100,26 +100,26 @@ def detectar_unidade(texto):
 
     txt = limpar(texto)
 
-    if "resistencia" in txt:
+    if "medidor de resistencia" in txt:
         return "Ω"
+
+    if "medidor de corrente continua" in txt:
+        return "A"
+
+    if "medidor de corrente alternada" in txt:
+        return "A"
+
+    if "medidor de tensao corrente continua" in txt:
+        return "V"
+
+    if "medidor de tensao corrente alternada" in txt:
+        return "V"
 
     if "capacitancia" in txt:
         return "pF"
 
     if "frequencia" in txt:
         return "Hz"
-
-    if "corrente continua" in txt:
-        return "A"
-
-    if "corrente alternada" in txt:
-        return "A"
-
-    if "tensao corrente continua" in txt:
-        return "V"
-
-    if "tensao corrente alternada" in txt:
-        return "V"
 
     if "medicoes lineares" in txt:
         return "mm"
