@@ -292,7 +292,7 @@ if st.button("🚀 PROCESSAR FT71"):
 
     def detectar_grandeza_pagina(texto):
 
-    txt = limpar(texto)
+        txt = limpar(texto)
 
     if "medidor de resistencia" in txt:
         return "RESISTENCIA"
