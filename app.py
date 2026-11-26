@@ -308,7 +308,32 @@ if st.button("🚀 PROCESSAR FT71"):
             ]
         )
 
-        for _, linha in tabela.iterrows():
+        st.write("==============")
+        st.write("GRANDEZA:", grandeza)
+        st.write("UNIDADE:", unidade)
+
+        st.write("COLUNAS:")
+
+        for c in tabela.columns:
+            st.write(c)
+
+        st.write("================================")
+        
+        st.write("GRANDEZA DETECTADA:")
+        st.write(grandeza)
+        
+        st.write("UNIDADE DETECTADA:")
+        st.write(unidade)
+        
+        st.write("COLUNAS DA TABELA:")
+        st.write(list(tabela.columns))
+        
+        st.write("TEXTO DA PAGINA:")
+        st.write(texto_pagina[:1000])
+
+for _, linha in tabela.iterrows():
+            
+        # for _, linha in tabela.iterrows():
 
             ws_saida.cell(
                 linha_saida,
