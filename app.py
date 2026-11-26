@@ -244,53 +244,7 @@ def extrair_pdfplumber(arquivo_pdf):
                     pass
 
     return tabelas_extraidas
-
-
-# ====================================================
-# UPLOAD
-# ====================================================
-
-pdf_file = st.file_uploader(
-    "Selecione o PDF",
-    type=["pdf"]
-)
-
-# ====================================================
-# PROCESSAMENTO
-# ====================================================
-
-if st.button("🚀 PROCESSAR FT71"):
-
-    if pdf_file is None:
-
-        st.error("Selecione um PDF")
-
-        st.stop()
-
-    with tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix=".pdf"
-    ) as tmp:
-
-        tmp.write(pdf_file.getvalue())
-
-        caminho_pdf = tmp.name
-
-    with pdfplumber.open(caminho_pdf) as pdf:
-
-        paginas_texto = []
-
-        for p in pdf.pages:
-
-            paginas_texto.append(
-                 p.extract_text() or ""
-            )
-
-    tabelas = extrair_pdfplumber(
-    caminho_pdf
-    )
-
-    def detectar_grandeza_pagina(texto):
+def detectar_grandeza_pagina(texto):
 
         txt = limpar(texto)
 
@@ -345,6 +299,52 @@ if st.button("🚀 PROCESSAR FT71"):
         ""
     )
 
+# ====================================================
+# UPLOAD
+# ====================================================
+
+pdf_file = st.file_uploader(
+    "Selecione o PDF",
+    type=["pdf"]
+)
+
+# ====================================================
+# PROCESSAMENTO
+# ====================================================
+
+if st.button("🚀 PROCESSAR FT71"):
+
+    if pdf_file is None:
+
+        st.error("Selecione um PDF")
+
+        st.stop()
+
+    with tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".pdf"
+    ) as tmp:
+
+        tmp.write(pdf_file.getvalue())
+
+        caminho_pdf = tmp.name
+
+    with pdfplumber.open(caminho_pdf) as pdf:
+
+        paginas_texto = []
+
+        for p in pdf.pages:
+
+            paginas_texto.append(
+                 p.extract_text() or ""
+            )
+
+    tabelas = extrair_pdfplumber(
+    caminho_pdf
+    )
+
+    
+
     wb = Workbook()
 
     ws = wb.active
@@ -366,6 +366,8 @@ if st.button("🚀 PROCESSAR FT71"):
     registros = 0
     
     indice_pagina = 0
+    
+    
     for tabela in tabelas:
 
     pagina_texto = ""
