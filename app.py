@@ -54,77 +54,89 @@ def limpar(txt):
 
 def detectar_grandeza(texto, tabela=None):
 
-    txt = limpar(texto)
+    texto = limpar(texto)
 
-    if "medidor de resistencia" in txt:
+    cabecalhos = ""
+
+    if tabela is not None:
+
+        cabecalhos = " ".join(
+            [str(c) for c in tabela.columns]
+        )
+
+        cabecalhos = limpar(cabecalhos)
+
+    conteudo = texto + " " + cabecalhos
+
+    if "resistencia" in conteudo:
         return "RESISTENCIA"
 
-    if "medidor de corrente continua" in txt:
+    if (
+        "corrente continua" in conteudo
+        or
+        "dc current" in conteudo
+    ):
         return "CORRENTE DC"
 
-    if "medidor de corrente alternada" in txt:
+    if (
+        "corrente alternada" in conteudo
+        or
+        "ac current" in conteudo
+    ):
         return "CORRENTE AC"
 
-    if "medidor de tensao corrente continua" in txt:
+    if (
+        "tensao continua" in conteudo
+        or
+        "tensao corrente continua" in conteudo
+        or
+        "dc voltage" in conteudo
+    ):
         return "TENSAO DC"
 
-    if "medidor de tensao corrente alternada" in txt:
+    if (
+        "tensao alternada" in conteudo
+        or
+        "tensao corrente alternada" in conteudo
+        or
+        "ac voltage" in conteudo
+    ):
         return "TENSAO AC"
 
-    if "capacitancia" in txt:
+    if "capacitancia" in conteudo:
         return "CAPACITANCIA"
 
-    if "frequencia" in txt:
+    if "frequencia" in conteudo:
         return "FREQUENCIA"
 
-    if "medicoes lineares" in txt:
+    if "medicoes lineares" in conteudo:
         return "DIMENSIONAL"
 
-    linhas = texto.split("\n")
-
-    for i, linha in enumerate(linhas):
-
-        if "instrumento" in linha.lower():
-
-            if i + 1 < len(linhas):
-
-                proxima = linhas[i + 1].strip()
-
-                if len(proxima) > 3:
-
-                    return proxima
-
     return ""
 
-def detectar_unidade(texto):
+def detectar_unidade(grandeza):
 
-    txt = limpar(texto)
+    mapa = {
 
-    if "medidor de resistencia" in txt:
-        return "Ω"
+        "RESISTENCIA": "Ω",
 
-    if "medidor de corrente continua" in txt:
-        return "A"
+        "CAPACITANCIA": "pF",
 
-    if "medidor de corrente alternada" in txt:
-        return "A"
+        "FREQUENCIA": "Hz",
 
-    if "medidor de tensao corrente continua" in txt:
-        return "V"
+        "CORRENTE DC": "A",
+        "CORRENTE AC": "A",
 
-    if "medidor de tensao corrente alternada" in txt:
-        return "V"
+        "TENSAO DC": "V",
+        "TENSAO AC": "V",
 
-    if "capacitancia" in txt:
-        return "pF"
+        "DIMENSIONAL": "mm"
+    }
 
-    if "frequencia" in txt:
-        return "Hz"
-
-    if "medicoes lineares" in txt:
-        return "mm"
-
-    return ""
+    return mapa.get(
+        grandeza,
+        ""
+    )
 
 
 def localizar_coluna(df, termos):
@@ -249,7 +261,7 @@ if st.button("🚀 PROCESSAR FT71"):
         )
 
         unidade = detectar_unidade(
-            texto_pagina
+            grandeza
         )
 
         col_pdf_inst = localizar_coluna(
