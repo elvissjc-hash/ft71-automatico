@@ -278,13 +278,13 @@ if st.button("🚀 PROCESSAR FT71"):
 
     with pdfplumber.open(caminho_pdf) as pdf:
 
-    paginas_texto = []
+        paginas_texto = []
 
-    for p in pdf.pages:
+        for p in pdf.pages:
 
-        paginas_texto.append(
-         p.extract_text() or ""
-        )
+            paginas_texto.append(
+                 p.extract_text() or ""
+            )
 
     tabelas = extrair_pdfplumber(
     caminho_pdf
